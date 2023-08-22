@@ -77,6 +77,7 @@ jobs:
           path: |
             dist/*
             !dist/*.app
+            CHANGELOG.md
 
   release:
     name: Create release
@@ -86,6 +87,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v3
+      - name: Extract Release Notes
+        id: extract_notes
+        run: |
+          body=$(awk 'BEGIN { RS="<!-- [0-9]+\\.[0-9]+\\.[0-9]+ -->\\s*"; ORS=""; } NR==2 { print $0; exit; }' artifacts/CHANGELOG.md)
+          echo "::set-output name=body::$body"
+        shell: bash
       - uses: ncipollo/release-action@v1
         with:
-          artifacts: "artifacts/*"
+          artifacts: "artifacts/dist/*"
+          body: ${{ steps.extract_notes.outputs.body }}
