@@ -75,8 +75,9 @@ jobs:
         with:
           name: artifacts
           path: |
-            dist/*
-            !dist/*.app
+            dist/*Linux
+            dist/*.dmg
+            dist/*.exe
             CHANGELOG.md
 
   release:
@@ -90,10 +91,9 @@ jobs:
       - name: Extract Release Notes
         id: extract_notes
         run: |
-          body=$(awk 'BEGIN { RS="<!-- [0-9]+\\.[0-9]+\\.[0-9]+ -->\\s*"; ORS=""; } NR==2 { print $0; exit; }' artifacts/CHANGELOG.md)
-          echo "::set-output name=body::$body"
+          awk 'BEGIN { RS="<!-- [0-9]+\\.[0-9]+\\.[0-9]+ -->\\s*"; ORS=""; } NR==2 { print $0; exit; }' artifacts/CHANGELOG.md >CHANGELOG.md
         shell: bash
       - uses: ncipollo/release-action@v1
         with:
           artifacts: "artifacts/dist/*"
-          body: ${{ steps.extract_notes.outputs.body }}
+          bodyFile: "CHANGELOG.md"
