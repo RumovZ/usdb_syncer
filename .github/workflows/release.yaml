@@ -12,15 +12,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            TARGET: Linux
-            PYINSTALLER_ARGS: "--onefile --add-data 'data/song_list.json:data'"
-          - os: macos-latest
-            TARGET: macOS
-            PYINSTALLER_ARGS: "--windowed --icon src/usdb_syncer/gui/resources/appicon_128x128.png --add-data 'data/song_list.json:data'"
           - os: windows-latest
             TARGET: Windows
-            PYINSTALLER_ARGS: "--onefile --icon src/usdb_syncer/gui/resources/appicon_128x128.png --add-data 'data/song_list.json;data'"
+            PYINSTALLER_ARGS: "--onefile --icon src/usdb_syncer/gui/resources/appicon_128x128.png"
     steps:
       - uses: actions/checkout@v3
       - name: Install Linux specific dependencies for dbus-python
@@ -57,10 +51,6 @@ jobs:
           PYTHONPATH: ${{ env.PERSISTENT_PYTHONPATH }}
       - name: Generate GUI elements
         run: python -m src.tools.generate_pyside_files
-        env:
-          PYTHONPATH: ${{ env.PERSISTENT_PYTHONPATH }}
-      - name: Scrape USDB song list to ship with the bundle
-        run: python -m src.tools.generate_song_list_json -t 'data/song_list.json' -u '${{ secrets.USDB_USER }}' -p '${{ secrets.USDB_PASSWORD }}'
         env:
           PYTHONPATH: ${{ env.PERSISTENT_PYTHONPATH }}
       - name: add dependencies for xcb support
