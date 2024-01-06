@@ -45,6 +45,8 @@ pytest = "*"
 # entry points
 usdb-syncer = {editable = true, path = "."}
 snakeviz = "*"
+# build
+pywin32-ctypes = {version = "*", markers="sys_platform == 'windows'"}
 
 [requires]
 python_version = "3.11"
