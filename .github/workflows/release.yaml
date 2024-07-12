@@ -107,14 +107,6 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
-      - name: Extract Release Notes
-        id: extract_notes
-        run: >
-          awk 'BEGIN { RS="<!-- [0-9]+\\.[0-9]+\\.[0-9]+ -->\\s*"; ORS=""; }
-          NR==2 { print $0; exit; }'
-          artifacts/CHANGELOG.md >CHANGELOG.md
-        shell: bash
       - uses: ncipollo/release-action@v1
         with:
           artifacts: "artifacts/USDB_Syncer*"
-          bodyFile: "CHANGELOG.md"
