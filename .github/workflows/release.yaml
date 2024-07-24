@@ -6,43 +6,9 @@ on:
       - "[0-9]+.[0-9]+.[0-9]+" # Only create releases on matching tags following semver X.Y.Z
 
 jobs:
-  scrape-song-list:
-    name: Scrape USDB song list
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Install Linux specific dependencies for dbus-python
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc python3-dev libdbus-1-dev
-          pkg-config --cflags --libs dbus-1
-      - name: Install poetry
-        run: |
-          python -m pip install poetry
-      - name: Install dependencies
-        run: |
-          poetry install
-      - name: Scrape USDB song list to ship with the bundle
-        run: >
-          poetry run generate_song_list_json
-          -t 'song_list.json'
-          -u '${{ secrets.USDB_USER }}'
-          -p '${{ secrets.USDB_PASSWORD }}'
-      - uses: actions/upload-artifact@v4
-        with:
-          name: artifacts
-          path: |
-            song_list.json
-            CHANGELOG.md
-
   build:
     name: Build packages
     runs-on: ${{ matrix.os }}
-    needs: scrape-song-list
     strategy:
       matrix:
         include:
@@ -50,25 +16,9 @@ jobs:
             TARGET: Linux
             PYINSTALLER_ARGS: >-
               --onefile
-              --add-data 'artifacts/song_list.json:data'
               --add-data 'src/usdb_syncer/db/sql:src/usdb_syncer/db/sql'
-          - os: macos-latest
-            TARGET: macOS
-            PYINSTALLER_ARGS: >-
-              --windowed
-              --icon src/usdb_syncer/gui/resources/appicon_128x128.png
-              --add-data 'artifacts/song_list.json:data'
-              --add-data 'src/usdb_syncer/db/sql:src/usdb_syncer/db/sql'
-          - os: windows-latest
-            TARGET: Windows
-            PYINSTALLER_ARGS: >-
-              --onefile
-              --icon src/usdb_syncer/gui/resources/appicon_128x128.png
-              --add-data 'artifacts/song_list.json;data'
-              --add-data 'src/usdb_syncer/db/sql;src/usdb_syncer/db/sql'
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
       - name: Install Linux specific dependencies for dbus-python
         if: matrix.TARGET == 'Linux'
         run: |
@@ -85,18 +35,12 @@ jobs:
           version: "6.7.*"
           setup-python: false
           no-qt-binaries: true
-      - name: Install poetry
-        run: |
-          python -m pip install poetry
+          # necessary because RUNNER_WORKSPACE is not set in act
+          dir: "."
+      - name: Install and activate poetry
+        run: python -m pip install poetry
       - name: Install dependencies
-        run: |
-          poetry install --without dev
-      - name: Write version and commit hash
-        run: >
-          poetry run write_release_info
-          -p src/usdb_syncer/constants.py
-          -v ${{ github.ref_name }}
-          -c ${{ github.workflow_sha }}
+        run: poetry install
       - name: Generate GUI elements
         run: poetry run generate_pyside_files
       - name: Build with pyinstaller for ${{matrix.os}}
@@ -123,33 +67,5 @@ jobs:
             --no-internet-enable \
             "dist/USDB_Syncer-${{github.ref_name}}-${{matrix.TARGET}}.dmg" \
             "dist/USDB_Syncer-${{github.ref_name}}-${{matrix.TARGET}}.app"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.os }}-artifacts
-          path: |
-            dist/*Linux
-            dist/*.dmg
-            dist/*.exe
-
-  release:
-    name: Create release
-    permissions:
-      contents: write
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-      - name: Extract Release Notes
-        id: extract_notes
-        run: >
-          awk 'BEGIN { RS="<!-- [0-9]+\\.[0-9]+\\.[0-9]+ -->\\s*"; ORS=""; }
-          NR==2 { print $0; exit; }'
-          artifacts/CHANGELOG.md >CHANGELOG.md
-        shell: bash
-      - uses: ncipollo/release-action@v1
-        with:
-          artifacts: "artifacts/USDB_Syncer*"
-          bodyFile: "CHANGELOG.md"
+      - name: Export file
+        run: read
